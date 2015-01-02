@@ -7,4 +7,4 @@ There are three types of players that can be tested: simple, counting, and compe
 
 The driver program contains the main method, and takes three arguments:
 
-   driver <bankroll> <hands> [simple|counting|competitor]
+   driver [bankroll] [hands] [simple|counting|competitor]
