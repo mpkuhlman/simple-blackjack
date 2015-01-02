@@ -1,0 +1,609 @@
+			      Blackjack!
+			EECS 280 -- Winter 2008
+		       Out: Friday, March 7,
+		 Due:  Tuesday, March 25, 11:59 PM
+
+I. Introduction
+
+This project will give you experience implementing abstract data
+types, using interfaces (abstract base classes), and using
+interface/implementation inheritance.
+
+II.  Blackjack (Simplified)
+
+Blackjack, also sometimes called 21, is a relatively simple game
+played with a standard deck of 52 playing cards.  There are two
+principals, a dealer and a player.  The player starts with a bankroll,
+and the game progresses in rounds called hands.  
+
+At the start of each hand, the player decides how much to wager on
+this hand.  It can be any amount between some minimum allowable wager
+and the player's total bankroll, inclusive.
+
+After the wager, the dealer deals a total of four cards: the first
+face-up to the player, the second face-up to himself, the third
+face-up to the player, the fourth face-down to himself.
+
+The player then examines their cards, forming a total.  Each card 2-10
+is worth its spot value; each face card (jack, king, queen) is also
+worth 10.  An ace is worth either 1 or 11--whichever is more
+advantageous to the player.  If the total includes an ace counted as
+11, the total is called "soft", otherwise it is called "hard".
+
+Play progresses first with the player, then the dealer.  The player's
+goal is to build a hand that is as close to 21 as possible without
+going over---the latter is called a "bust", and a player who busts
+loses the hand without forcing the dealer to play.  As long as the
+player believes another card will help, the player "hits"---asks the
+dealer for another card.  Each of these additional cards is dealt
+face-up.  This process ends either when the player decides to
+"stand"---ask for no cards---or the player busts.  Note that a player
+can stand with two cards; one need not hit at all in a hand.
+
+If the player is dealt an ace plus any ten or face card, the player's
+hand is called a "natural 21", and the player's wager is paid off with
+3 to 2 odds, without examining the dealer's cards.  In other words, if
+the player had wagered 10, the player would win 15 if dealt a natural
+21.
+
+If the player neither busts nor is dealt a natural 21, play then
+progresses to the dealer.  The dealer *must* hit until he either
+reaches a total greater than or equal to 17 (hard or soft), or busts.
+If the dealer busts, the player wins.  Otherwise, the two totals are
+compared.  If the dealer's total is higher, the player's bankroll
+decreases by the amount of her wager.  If the player's total is
+higher, her bankroll increases by the amount of her wager. If the
+totals are equal, the bankroll is unchanged; this is called a "push".
+The only case where the hands are equal that is not a push is when the
+player and dealer are each dealt natural 21s.  In that case, the
+player is still paid 3:2.
+
+Note that this is a very simplified form of the game: we do not split
+pairs, allow double-down bets, or take insurance.  Likewise, a natural
+21 for the dealer does not end the hand pre-emptively.
+
+III.  Programming Assignment
+
+You will provide one or more implementations of four separate
+abstractions for this project: a deck of cards, a blackjack hand,
+a blackjack player, and a game driver.  All files referenced in
+this specification are located at:
+
+    /afs/engin.umich.edu/class/perm/eecs280/proj4
+
+You may copy them to your private directory space, but may not modify
+them in any way.  This will help ensure that your submitted project
+compiles correctly: for this project, the penalty for code that does
+not compile will be severe, regardless of the reason.
+
+III.a. The Deck ADT
+
+Your first task is to implement the following ADT representing a deck
+of cards:
+
+
+class DeckEmpty { // An exception type
+};
+
+const int DeckSize = 52;
+
+class Deck {
+    // A standard deck of 52 playing cards---no jokers
+    Card      deck[DeckSize];   // The deck of cards
+    int       next;             // The next card to deal
+
+ public:
+
+    Deck();
+    // EFFECTS: constructs a "newly opened" deck of cards.  first the
+    // spades from 2-A, then the hearts, then the clubs, then the
+    // diamonds.  The first card dealt should be the 2 of Spades.
+
+    void reset();
+    // EFFECTS: resets the deck to the state of a "newly opened" deck
+    // of cards:
+
+    void shuffle(int n);
+    // REQUIRES: n is between 0 and 52, inclusive.
+
+    // MODIFIES: this
+
+    // EFFECTS: cut the deck into two segments: the first n cards,
+    // called the "left", and the rest called the "right".  Note that
+    // either right or left might be empty.  Then, rearrange the deck
+    // to be the first card of the right, then the first card of the
+    // left, the 2nd of right, the 2nd of left, and so on.  Once one
+    // side is exhausted, fill in the remainder of the deck with the
+    // cards remaining in the othe rside.  Finally, make the first
+    // card in this shuffled deck the next card to deal.  For example,
+    // shuffle(26) on a newly-reset() deck results in: 2-clubs,
+    // 2-spades, 3-clubs, 3-spades ... A-diamonds, A-hearts.
+    //
+    // Note: if shuffle is called on a deck that has already had some
+    // cards dealt, those cards should first be restored to the deck
+    // in the order in which they were dealt, preserving the most
+    // recent post-shuffled/post-reset state.
+
+    Card deal();
+    // MODIFIES: this
+
+    // EFFECTS: returns the next card to be dealt.  If no cards
+    // remain, throws an instance of DeckEmpty.
+
+    int cardsLeft();
+    // EFFECTS: returns the number of cards in the deck that have not
+    // been dealt since the last reset/shuffle.
+};
+
+The Deck ADT is specified in deck.h.  The Deck ADT depends on the
+following Card type:
+
+    enum Suit {
+	SPADES, HEARTS, CLUBS, DIAMONDS
+    };
+
+    extern const char *SuitNames[DIAMONDS+1];
+
+    enum Spot {
+	TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN,
+	JACK, QUEEN, KING, ACE
+    };
+
+    extern const char *SpotNames[ACE+1];
+
+    struct Card {
+	Spot  spot;
+	Suit  suit;
+    };
+
+which is declared in card.h, implemented by card.cpp, and included by
+deck.h.  The file card.cpp defines SpotNames and SuitNames for you, so
+that SuitNames[HEARTS] evaluates to "Hearts", and so on.
+
+You are to put your implementation of this ADT in a file named
+"deck.cpp".  You *must* use *exactly* this name.
+
+III.b.  The Hand Interface
+
+Your second task is to implement the following ADT representing a
+blackjack hand:
+
+struct HandValue {
+    int  count;    // Value of hand
+    bool soft;     // true if hand value is a soft count
+};
+
+class Hand {
+    // OVERVIEW: A blackjack hand of zero or more cards
+    // Note: this really is the only private state you need!
+    HandValue curValue;
+ public:
+    Hand(); 
+    // EFFECTS: establishes an empty blackjack hand.
+    
+    void discardAll();
+    // MODIFIES: this
+    // EFFECTS: discards any cards presently held, restoring the state
+    // of the hand to that of an empty blackjack hand.
+
+    void addCard(Card c);
+    // MODIFIES: this
+    // EFFECTS: adds the card "c" to those presently held.
+
+    HandValue handValue() const;
+    // EFFECTS: returns the present value of the blackjack hand.  The
+    // count field is the highest blackjack total possible without
+    // going over 21.  The soft field should be true if and only if at
+    // least one ACE is present, and its value is counted as 11 rather
+    // than 1.  If the hand is over 21, return the hard value of the hand
+    // (i.e. all ACEs count as 1).
+    //
+    // Note: the const qualifier at the end of handValue means that
+    // you are not allowed to change any member variables inside
+    // handValue.  It is required because Players only get const Hands
+    // passed to them, and therefore can only call methods gauranteed
+    // not to change the hand.
+};
+
+The Hand ADT is specified in hand.h  The Hand ADT depends on the Card
+type, and includes card.h.
+
+You are to put your implementation of this ADT in a file named
+"hand.cpp".  You *must* use *exactly* this name.
+
+III.c.  The Player Interface
+
+Your third task is to implement three different blackjack players.
+The interface for a Player is:
+
+
+class Player {
+    // A virtual base class, providing the player interface
+ public:
+    virtual int bet(unsigned int bankroll,
+		    unsigned int minimum) = 0; 
+    // REQUIRES: bankroll >= minimum
+    // EFFECTS: returns the player's bet, between minimum and bankroll 
+    // inclusive
+
+    virtual bool draw(Card dealer,             // Dealer's "up card"
+		      const Hand &player) = 0; // Player's current hand
+    // EFFECTS: returns true if the player wishes to be dealt another
+    // card, false otherwise.
+
+    virtual void expose(Card c) = 0;
+    // EFFECTS: allows the player to "see" the newly-exposed card c.
+    // For example, each card that is dealt "face up" is expose()d.
+    // Likewise, if the dealer must show his "hole card", it is also
+    // expose()d.  Note: not all cards dealt are expose()d---if the
+    // player goes over 21 or is dealt a natural 21, the dealer need
+    // not expose his hole card.
+
+    virtual void shuffled() = 0;
+    // EFFECTS: tells the player that the deck has been re-shuffled.
+
+    virtual ~Player() { }
+    // Note: this is here only to suppress a compiler warning.
+    //       Destructors are not needed for this project.
+};
+
+
+You are to implement three different classes derived from this
+interface.
+
+The first player is the Simple player, who plays a simplified version
+of basic strategy for blackjack.  The simple player always places the
+minimum allowable wager, and decides to hit or stand based on the
+following rules:
+
+The first set of rules apply if the player has a "hard count"---his
+best total counts an Ace (if any) for 1, not 11.
+
+    * If the player's hand totals 11 or less, he always hits.
+
+    * If the player's hand totals 12, he stands if the dealer shows 4,
+       5, or 6; otherwise he hits.
+
+    * If the player's hand totals between 13 and 16 inclusive, he
+      stands if the dealer shows a 2 through a 6 inclusive; otherwise
+      he hits.
+
+    * If the player's hand totals 17 or greater, he always stands.
+
+The second set of rules apply if the player has a "soft count"---his
+best total includes one Ace worth 11.  (Note that a hand would never
+count two Aces as 11 each--that's a bust of 22.)
+
+    * If the player's hand totals 17 or less, he always hits.
+
+    * If the player's hand totals 18, he stands if the dealer shows a
+      2, 7, or 8, otherwise he hits.
+
+    * If the player's hand totals 19 or greater, he always stands.
+
+The Simple player does nothing for expose and shuffled events.
+
+The second player is the Counting player.  This player counts cards in
+addition to playing the basic strategy.  The intuition behind card
+counting is that when the deck has more face cards (worth 10) than
+low-numbered cards, the deck is favorable to the player.  The converse
+is also true.  
+
+The Counting player keeps a running "count" of the cards he's seen
+from the deck.  Each time he sees (via the expose() method) a 10,
+Jack, Queen, King, or Ace, he subtracts one from the count.  Each time
+he sees a 2, 3, 4, 5, or 6, he adds one to the count.  When he sees
+that the deck is shuffled(), the count is reset to zero.  Whenever the
+count is +2 or greater, the Counting player bets double the minimum or
+his entire bankroll, which ever is smaller. Otherwise he bets the
+minimum.  The Counting player should not re-implement methods of the
+Simple player unnecessarily.
+
+The final player you are to implement is the Competitor.  The
+Competitor can play any strategy you choose.  The Competitor cannot
+play the same strategy as the Simple or Counting players---there must
+be some difference, however minor.  The quality of the Competitor's
+play will not count toward your grade.  However, we will have a
+tournament that evaluates each student's competitors under a large
+number of hands.  The top several Competitors will win fame, but
+perhaps not fortune.  To give you more incentive to come up with a
+good Competitor, each member of the course staff will also enter a
+Competitor.  So, even if you don't beat the other students, you can
+beat the Professors and GSIs!
+
+All three of these Players must be implemented in a file named
+"player.cpp". You must also declare a static global instance of each
+of the three Players you implement in player.cpp.  Finally, you should
+implement the following "access" functions that return pointers to
+each of these three players.
+
+    extern Player *get_Simple();
+
+    extern Player *get_Counting();
+
+    extern Player *get_Competitor();
+
+Note: we've structured the Player as an Abstract Base Class so that
+you have complete design freedom for the Competitor and its state.
+Have fun!
+
+III.d.  The Driver program
+
+Finally, you are to implement a Driver that can be used to simulate
+this version of blackjack given your implementations of Deck and the
+three Players.   The driver program, when run, takes three arguments:
+
+   driver <bankroll> <hands> [simple|counting|competitor]
+
+The first argument is an integer denoting the player's starting
+bankroll.  The second argument is the maximum number of hands to play
+in the simulation.  The final argument is one of the three strings
+"simple", "counting", or "competitor", denoting which of the three
+players to use in the simulation.
+
+The driver first shuffles the deck.  To shuffle the deck, you choose
+seven cuts between 13 and 39 inclusive at random, shuffling the deck
+with each of these cuts.  We have supplied a header--rand.h--and
+implementation--rand.cpp--that defines a function that provides these
+random cuts.  Each time the deck is shuffled, first announce it:
+
+    cout << "Shuffling the deck\n";
+
+And announce each of the seven cut points:
+
+    cout << "cut at " << cut << endl;
+
+then be sure to tell the player via shuffled().
+
+Then, while the player's bankroll is above the minimum bet of 5 and
+there are hands left to be played:
+
+   * Announce the hand:
+
+	cout << "Hand " << thishand << " bankroll " << bankroll << endl;
+
+   * If there are fewer than 20 cards left, reshuffle the deck as
+     described above.
+
+   * Ask the player for a wager, and announce it:
+
+        cout << "Player bets " << wager << endl;
+
+   * Deal four cards: one face-up to the player, one face-up to the
+     dealer, one face-up to the player, and one face-down to the
+     dealer.  Announce the face-up cards to cout: for example
+
+          Player dealt Ace of Spades
+	  Dealer dealt Two of Hearts
+
+     Use the SpotNames and SuitNames arrays for this, and be sure to
+     expose() any face-up cards to the player.
+
+   * If the player is dealt a natural 21, immediately pay the player
+     3/2 of his bet.  Note that, since we are working with integers,
+     you'll have to be a bit careful with the 3/2 payout.  For
+     example, a wager of 5 would pay 7 if a natural 21 is dealt:
+     (3*5)/2 is 7 in integer arithmetic.  In this case, announce the
+     win:
+
+	cout << "Player dealt natural 21\n";
+
+   * If the player is not dealt a natural 21, have the player play his
+     hand.  Draw cards until the player either stands or busts.
+     Announce and expose each card dealt as above.
+
+   * Announce the player's total
+
+        cout << "Player's total is " << p_count << endl;
+
+     and if the player busts, say so
+
+	cout << "Player busts\n";
+
+     deducting the wager from the bankroll and moving on to the next
+     hand.
+
+   * If the player hasn't busted, announce and expose the dealer's
+     hole card.  For example:
+
+         Dealer's hole card is Ace of Spades
+
+      (Note: the hole card is NOT exposed if either the player busts
+      or is dealt a natural 21.)
+
+   * If the player hasn't busted, play the dealer's hand.  The dealer
+     must hit until reaching seventeen or busting.  Announce and
+     expose each card as above.
+
+   * Announce the dealer's total
+
+        cout << "Dealer's total is " << p_count << endl;
+
+     and if the dealer busts, say so
+
+	cout << "Dealer busts\n";
+
+     crediting the wager from the bankroll and moving on to the next
+     hand.
+
+   * If neither the dealer nor the player bust, compare the totals and
+     announce the outcome.  Credit the bankroll, debit it, or leave it
+     unchanged as appropriate.
+
+	cout << "Dealer wins\n";
+	cout << "Player wins\n";
+	cout << "Push\n";
+
+Finally, when the player either has too little money to make a minimum
+wager *or* the allotted hands have been played, announce the outcome:
+
+    cout << "Player has " << bankroll << " after "
+	 << thishand-1 << " hands\n";
+
+III.d Implementation Rules
+
+   * You may #include <iostream>, <iomanip>, <string>, <cstdlib>, and
+     <cassert>. No other system header files may be included, and you
+     may not make any call to any function in any other library (even
+     if your IDE allows you to call the function without including the
+     appropriate header file).  You may also include <cmath>, but only
+     for use in your Competitor.  Other include files for your
+     Competitor may be allowed at the discretion of the course staff,
+     so just ask.
+
+   * Input and/or output should only be done where it is specified. 
+
+   * No gotos.
+
+   * No global variables in the driver.  You may use global state in
+     the class implementations, but it must be static and (except for
+     the three players) const.
+
+   * There is no user input.  You may assume that functions are called
+     consistent with their advertised specifications.  This means you
+     need not perform error checking.  However, when testing your code
+     in concert, you may use the assert() macro to program
+     defensively.
+
+   * You are strongly discouraged from using any dynamic memory
+     facilties (new/delete and friends), but are allowed to do so in
+     your Competitor if you so choose.
+
+IV. Testing
+
+For this project, you are required to write, describe, and submit
+individual, focused test cases for a Deck and a Counting Player.  For
+both of these ADTs, determine the behaviors required of the
+implementation.  Then, for each of these behaviors:
+
+   * list the *specific* behavior that the implementation must exhibit
+     in at most three sentences, and 
+
+   * write a program that, when linked against the implementation
+     tests for the presence/absence of that behavior.
+
+For the deck and the counting player, submit the following files
+
+  <impl>.overview   -- the list of behaviors and test case filenames.
+
+  <impl>.case.1.cpp -- the first test case named in <impl>.overview
+  <impl>.case.2.cpp -- the second
+       ...
+  <impl>.case.n.cpp -- the Nth.
+
+For example, if you identify three behaviors in Deck, and two in the
+Counting player, there would be seven files:
+
+    deck.overview
+    deck.case.1.cpp
+    deck.case.2.cpp
+    deck.case.3.cpp
+    player.overview
+    player.case.1.cpp
+    player.case.2.cpp
+
+Be *sure* to use the correct filenames, or you will not receive full
+credit!
+
+Test cases in this project are "acceptance tests".  Your deck tests
+(each of which includes at least a main() function) will be linked
+against a correct card.cpp and a possibly incorrect deck.cpp.  Your
+player tests (each of which includes at least a main() function) will
+be linked against a correct card.cpp, a correct hand.cpp, and a
+possibly incorrect player.cpp.
+
+Your test case must decide, based on the results from calls to
+deck/player methods, whether the deck/counting player is correct or
+incorrect.  If your case believes the deck/player to be correct, it
+should return 0 from main().  If your case believes the deck/player to
+be incorrect, it should return any value other than zero---the value
+-1 is commonly used to denote failure.  We do not compare the output
+of your test cases against correct/incorrect implementations, but you
+may find that such output is useful for your own testing, and you are
+free to make use of as much as you like.
+
+Here is an example of code that tests a hypthetical "integer add"
+function (declared in addInts.h) with an "expected" test case:
+
+// Tests the addInts function
+#include "addInts.h"
+int main()
+{
+   int x = 3;
+   int y = 4;
+   int answer = 7;
+   
+   int candidate = addInts(x, y);
+   if (candidate == answer) {
+       return 0;
+   } else {
+       return -1;
+   }
+}
+
+We will write a collection of decks/players with different, specific
+bugs.  You will be evaluated based on how many of our buggy versions
+your test cases identify.  If your test case mis-identifies a correct
+library as buggy, it will not be used to evaluate buggy libraries.
+So, for example, writing a test case that returns non-zero in all
+cases will generate no credit.
+
+
+V. Building the project
+
+This project has several components: when complete, there are six
+source files.  To build the program, type the following all on one
+line (making sure you've copied all header files):
+
+   g++ -Wall -Werror -o blackjack driver.cpp deck.cpp hand.cpp
+       player.cpp rand.cpp card.cpp
+
+If you want to see only if a single file compiles cleanly, you can
+compile it individually using the "-c" flag.  For example, to check
+your deck:
+
+   g++ -Wall -Werror -c deck.cpp
+
+Programs that do not compile cleanly will be severely penalized in
+this project, so be sure to check them in the CAEN environment.
+
+We have supplied one simple set of output produced by a correct deck,
+hand, simple player, and driver.  It is called sample.txt.  To test
+your ensemble, do the following:
+
+    $ ./blackjack 100 3 simple > test.out
+    $ diff test.out sample.txt
+    $ 
+
+If diff reports any differences at all, you have a bug.
+
+VI. Handing in and grading
+
+Use the submit280 program to submit the following files in project 4:
+
+    deck.cpp          -- your Deck implementation
+    player.cpp        -- your three Players
+    driver.cpp        -- your simulation driver
+    hand.cpp          -- your Hand implementation
+    deck.overview     -- overview of your deck test cases
+    deck.case.1.cpp   -- first deck test case
+      ...
+    deck.case.N.cpp   -- Nth deck test case
+    player.overview   -- overview of your Counting Player test cases
+    player.case.1.cpp -- first player test case
+      ...
+    player.case.N.cpp -- Nth player test case
+
+IMPORTANT NOTE: You must submit ALL of your files with a SIGNLE
+invocation of submit280.  DO NOT SUBMIT YOUR FILES INDIVIDUALLY.
+
+There are three components to your grade in this project: correctness
+of deck, player, driver, and hand; testing of deck and player; and the
+style of your deck, player, driver, and hand implementations.
+
+VII. Collaboration
+
+In addition to the usual prohibition against sharing any code (as
+described in the syllabus) you may not share test cases, behavior
+lists, or output with anyone else---all must be entirely your own
+work.  Any sharing will be considered a violation of the Honor Code.

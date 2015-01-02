@@ -1,0 +1,77 @@
+#include <cassert>
+#include "hand.h"
+
+
+Hand::Hand()
+{
+  discardAll();
+}
+
+void Hand::discardAll()
+{
+  curValue.count = 0;
+  curValue.soft = false;
+}
+
+void Hand::addCard(Card c)
+{
+  int add;
+  switch(c.spot) {
+  case TWO:
+    add = 2;
+    break;
+  case THREE:
+    add = 3;
+    break;
+  case FOUR:
+    add = 4;
+    break;
+  case FIVE:
+    add = 5;
+    break;
+  case SIX:
+    add = 6;
+    break;
+  case SEVEN:
+    add = 7;
+    break;
+  case EIGHT:
+    add = 8;
+    break;
+  case NINE:
+    add = 9;
+    break;
+  case TEN:
+  case JACK:
+  case QUEEN:
+  case KING:
+    add = 10;
+    break;
+  case ACE:
+    if((curValue.count + 11) > 21) {
+      add = 1;
+      //curValue.soft = false;
+    }
+    else {
+      add = 11;
+      curValue.soft = true;
+    }
+    break;
+  default:
+    assert(0);
+    break;
+  }
+  if(curValue.soft && ((curValue.count + add) > 21)) {
+    curValue.count = curValue.count + add - 10;
+    curValue.soft = false;
+  }
+  else
+    curValue.count += add;
+      
+}
+
+HandValue Hand::handValue() const
+{
+  return curValue;
+}
+  
